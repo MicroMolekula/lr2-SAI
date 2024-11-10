@@ -1,6 +1,8 @@
 Гайд по запуску для тимейтов
 Для начала нужно установить node, можно скачать тут https://nodejs.org/en/download/package-manager
 
+Команды запускать по порядку
+
 ```
 git clone https://github.com/MicroMolekula/lr2-SAI.git
 
