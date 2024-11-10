@@ -45,9 +45,62 @@ export class ExpertSystem {
     }
 
     run(inputData) {
-
+        let targetValue = null;
+        if (this.checkIndex(this.getIndex(inputData.init, inputData.target))) {
+            this.addFact(inputData.target)
+            targetValue = this.getGtIndex(inputData.init)
+            return this.upToDown(targetValue)
+        }
         this.addInitStateInFacts(inputData.init)
-        let targetValue = inputData.target
+        targetValue = inputData.target
+        return this.upToDown(targetValue)
+    }
+
+    getIndex(init, target) {
+        let initIndexes = [];
+        let targetIndexes = null;
+        for (let i = 0; i < this.rules.length; i++) {
+            for (let stateIn in init) {
+                if (this.rules[i].conds.some(o => o.target === init[stateIn].target && o.state === init[stateIn].state)) {
+                    initIndexes.push(i)
+                }
+            }
+            if (this.rules[i].conds.some(o => o.target === target.target && o.state === target.state)) {
+                targetIndexes = i
+            }
+        }
+        return {
+            initIndexes,
+            targetIndexes
+        }
+    }
+
+    checkIndex(object) {
+        for (let init of object.initIndexes) {
+            if (init < object.targetIndexes) {
+                return false
+            }
+        }
+        return true
+    }
+
+    getGtIndex(init) {
+        let initIndexes = 100000;
+        let initMin = null;
+        for (let i = 0; i < this.rules.length; i++) {
+            for (let stateIn in init) {
+                if (this.rules[i].conds.some(o => o.target === init[stateIn].target && o.state === init[stateIn].state)) {
+                    if (i < initIndexes) {
+                        initMin = init[stateIn]
+                        initIndexes = i;
+                    }
+                }
+            }
+        }
+        return initMin
+    }
+
+    upToDown(targetValue) {
         let newFactInferred = true
         let errorRule = null
         let startFlag = false
@@ -62,17 +115,16 @@ export class ExpertSystem {
                     newFactInferred = true
                     startFlag = true
                 } else {
-                  if (startFlag) {
-                      errorRule = rule
-                      startFlag = false
-                  }
+                    if (startFlag) {
+                        errorRule = rule
+                        startFlag = false
+                    }
                 }
             }
 
             if (!newFactInferred) {
-                return [false, this.createErrorCond(errorRule)]
+                return [false, errorRule ? this.createErrorCond(errorRule) : null]
             }
         }
     }
-
 }
