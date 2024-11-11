@@ -44,11 +44,21 @@ export class ExpertSystem {
         return null
     }
 
+    filterObject(obj, callback) {
+        return Object.fromEntries(Object.entries(obj).
+        filter(([key, val]) => callback(val, key)));
+    }
+
     run(inputData) {
         let targetValue = null;
-        if (this.checkIndex(this.getIndex(inputData.init, inputData.target))) {
+        if (!this.checkIndex(this.getIndex(inputData.init, inputData.target))) {
             this.addFact(inputData.target)
             targetValue = this.getGtIndex(inputData.init)
+            console.log(this.getGtIndex(inputData.init))
+            inputData.init = this.filterObject(inputData.init, (val, key) => {
+                return val.title !== targetValue.title && val.state !== targetValue.state
+            })
+            this.addInitStateInFacts(inputData.init)
             return this.upToDown(targetValue)
         }
         this.addInitStateInFacts(inputData.init)
@@ -59,15 +69,22 @@ export class ExpertSystem {
     getIndex(init, target) {
         let initIndexes = [];
         let targetIndexes = null;
+        let lastResRuleTitle = this.rules[this.rules.length-1].res.title
         for (let i = 0; i < this.rules.length; i++) {
             for (let stateIn in init) {
-                if (this.rules[i].conds.some(o => o.target === init[stateIn].target && o.state === init[stateIn].state)) {
+                if (this.rules[i].conds.some(o => o.title === init[stateIn].title && o.state === init[stateIn].state)) {
                     initIndexes.push(i)
                 }
+                if (init[stateIn].title === lastResRuleTitle) {
+                    initIndexes.push(1000)
+                }
             }
-            if (this.rules[i].conds.some(o => o.target === target.target && o.state === target.state)) {
+            if (this.rules[i].conds.some(o => o.title === target.title && o.state === target.state)) {
                 targetIndexes = i
             }
+        }
+        if (targetIndexes === null) {
+            targetIndexes = 10000
         }
         return {
             initIndexes,
@@ -77,7 +94,7 @@ export class ExpertSystem {
 
     checkIndex(object) {
         for (let init of object.initIndexes) {
-            if (init < object.targetIndexes) {
+            if (init > object.targetIndexes) {
                 return false
             }
         }
@@ -85,19 +102,24 @@ export class ExpertSystem {
     }
 
     getGtIndex(init) {
-        let initIndexes = 100000;
-        let initMin = null;
+        let initIndexes = -1;
+        let initMax = null;
+        let lastResRuleTitle = this.rules[this.rules.length-1].res.title
         for (let i = 0; i < this.rules.length; i++) {
             for (let stateIn in init) {
-                if (this.rules[i].conds.some(o => o.target === init[stateIn].target && o.state === init[stateIn].state)) {
-                    if (i < initIndexes) {
-                        initMin = init[stateIn]
+                if (this.rules[i].conds.some(o => o.title === init[stateIn].title && o.state === init[stateIn].state)) {
+                    if (i > initIndexes) {
+                        initMax = init[stateIn]
                         initIndexes = i;
                     }
                 }
+                if (init[stateIn].title === lastResRuleTitle) {
+                    initMax = init[stateIn]
+                    initIndexes = 1000;
+                }
             }
         }
-        return initMin
+        return initMax
     }
 
     upToDown(targetValue) {
